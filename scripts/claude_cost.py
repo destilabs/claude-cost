@@ -258,15 +258,39 @@ def _fmt_tokens(n: int) -> str:
 
 
 def _short_model(model: str) -> str:
-    base = model.split("[")[0]
-    for family in ("opus", "sonnet", "haiku"):
-        if family in base:
-            parts = base.split("-")
-            for i, p in enumerate(parts):
-                if p == family and i + 1 < len(parts):
-                    return f"{family}-{parts[i + 1]}"
-            return family
-    return base
+    """Render a model id as "<family>-<major>[.<minor>]".
+
+    Handles both naming conventions:
+      - "claude-opus-4-7"   -> "opus-4.7"
+      - "claude-sonnet-4-6" -> "sonnet-4.6"
+      - "claude-haiku-4-5-20251001" -> "haiku-4.5" (trailing date dropped)
+      - "claude-3-5-sonnet" -> "sonnet-3.5"
+      - "claude-opus-4-7[1m]" -> "opus-4.7"
+    """
+    if not model:
+        return "unknown"
+    base = model.split("[", 1)[0].rstrip("-")
+    parts = base.split("-")
+    family_idx = next(
+        (i for i, p in enumerate(parts) if p in ("opus", "sonnet", "haiku")),
+        -1,
+    )
+    if family_idx < 0:
+        return base
+    family = parts[family_idx]
+    version: list[str] = []
+    # Prefer version digits after the family (current naming).
+    for p in parts[family_idx + 1:]:
+        if p.isdigit() and len(version) < 2:
+            version.append(p)
+        else:
+            break
+    if not version:
+        # Fall back to digits before the family (legacy "claude-3-5-sonnet").
+        for p in parts[:family_idx]:
+            if p.isdigit() and len(version) < 2:
+                version.append(p)
+    return f"{family}-{'.'.join(version)}" if version else family
 
 
 Column = tuple[str, str, str]  # (header, key, align: "left" | "right")
