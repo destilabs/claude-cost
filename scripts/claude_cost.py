@@ -1,8 +1,5 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = [
-#     "rich>=13.0",
-# ]
 # ///
 """claude-cost: price local Claude Code sessions at the Anthropic API rate card.
 
@@ -17,6 +14,9 @@ metadata each assistant message records, and prints two tables:
 Costs are shadow prices computed against the public Anthropic API rate
 card. They represent the value a Max subscription extracts, not dollars
 actually paid.
+
+Output uses plain fixed-width columns so it renders identically in a
+narrow Claude Code pane and a wide terminal. No rich dependency.
 """
 
 from __future__ import annotations
@@ -28,9 +28,6 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-
-from rich.console import Console
-from rich.table import Table
 
 CLAUDE_PROJECTS_DIR = Path.home() / ".claude" / "projects"
 
@@ -272,69 +269,110 @@ def _short_model(model: str) -> str:
     return base
 
 
-def render_session_table(sessions: list[SessionAgg], top: int, console: Console) -> None:
-    table = Table(title=f"Top {top} most expensive sessions")
-    table.add_column("#", justify="right", style="dim")
-    table.add_column("Date", style="dim")
-    table.add_column("Repo")
-    table.add_column("Model", style="dim")
-    table.add_column("Turns", justify="right")
-    table.add_column("Input", justify="right", style="dim")
-    table.add_column("Output", justify="right", style="dim")
-    table.add_column("Cache hit", justify="right")
-    table.add_column("$ Cost", justify="right", style="bold")
-    table.add_column("Session", style="dim")
-
-    for rank, s in enumerate(sessions[:top], start=1):
-        table.add_row(
-            str(rank),
-            s.start.strftime("%Y-%m-%d %H:%M"),
-            s.repo,
-            _short_model(s.dominant_model),
-            f"{s.turns:,}",
-            _fmt_tokens(s.input_tokens),
-            _fmt_tokens(s.output_tokens),
-            f"{s.cache_hit_rate * 100:.0f}%",
-            f"${s.cost_usd:,.2f}",
-            s.session_id[:8],
-        )
-    console.print(table)
+Column = tuple[str, str, str]  # (header, key, align: "left" | "right")
 
 
-def render_repo_table(repos: list[RepoAgg], console: Console) -> None:
-    table = Table(title="Cost by repo")
-    table.add_column("Repo", style="bold")
-    table.add_column("Sessions", justify="right")
-    table.add_column("Turns", justify="right")
-    table.add_column("$ Total", justify="right", style="bold")
-    table.add_column("$ / session", justify="right")
+def _print_table(
+    title: str,
+    columns: list[Column],
+    rows: list[dict[str, str]],
+    footer: dict[str, str] | None = None,
+) -> None:
+    widths: dict[str, int] = {}
+    for header, key, _ in columns:
+        cell_max = max((len(r[key]) for r in rows), default=0)
+        footer_len = len(footer[key]) if footer and key in footer else 0
+        widths[key] = max(len(header), cell_max, footer_len)
 
-    total_cost = 0.0
-    total_turns = 0
-    total_sessions: set[str] = set()
-    for r in repos:
-        table.add_row(
-            r.repo,
-            str(len(r.sessions)),
-            f"{r.turns:,}",
-            f"${r.cost_usd:,.2f}",
-            f"${r.avg_cost_per_session:,.2f}",
-        )
-        total_cost += r.cost_usd
-        total_turns += r.turns
-        total_sessions |= r.sessions
+    def fmt_row(get: dict[str, str]) -> str:
+        parts: list[str] = []
+        for _, key, align in columns:
+            w = widths[key]
+            v = get.get(key, "")
+            parts.append(v.ljust(w) if align == "left" else v.rjust(w))
+        return "  ".join(parts)
 
-    table.add_section()
+    header_row = {key: header for header, key, _ in columns}
+    sep_row = {key: "-" * widths[key] for _, key, _ in columns}
+
+    print()
+    print(title)
+    print(fmt_row(header_row))
+    print(fmt_row(sep_row))
+    for r in rows:
+        print(fmt_row(r))
+    if footer is not None:
+        print(fmt_row(sep_row))
+        print(fmt_row(footer))
+
+
+def render_session_table(sessions: list[SessionAgg], top: int) -> None:
+    if not sessions:
+        return
+    rows = [
+        {
+            "rank": str(i),
+            "date": s.start.strftime("%m-%d %H:%M"),
+            "repo": s.repo,
+            "model": _short_model(s.dominant_model),
+            "turns": f"{s.turns:,}",
+            "input": _fmt_tokens(s.input_tokens),
+            "output": _fmt_tokens(s.output_tokens),
+            "cache": f"{s.cache_hit_rate * 100:.0f}%",
+            "cost": f"${s.cost_usd:,.2f}",
+            "session": s.session_id[:8],
+        }
+        for i, s in enumerate(sessions[:top], start=1)
+    ]
+    columns: list[Column] = [
+        ("#", "rank", "right"),
+        ("Date", "date", "left"),
+        ("Repo", "repo", "left"),
+        ("Model", "model", "left"),
+        ("Turns", "turns", "right"),
+        ("Input", "input", "right"),
+        ("Output", "output", "right"),
+        ("Cache", "cache", "right"),
+        ("$ Cost", "cost", "right"),
+        ("Session", "session", "left"),
+    ]
+    _print_table(f"Top {top} most expensive sessions", columns, rows)
+
+
+def render_repo_table(repos: list[RepoAgg]) -> None:
+    if not repos:
+        return
+    rows = [
+        {
+            "repo": r.repo,
+            "sessions": str(len(r.sessions)),
+            "turns": f"{r.turns:,}",
+            "total": f"${r.cost_usd:,.2f}",
+            "avg": f"${r.avg_cost_per_session:,.2f}",
+        }
+        for r in repos
+    ]
+
+    total_cost = sum(r.cost_usd for r in repos)
+    total_turns = sum(r.turns for r in repos)
+    total_sessions: set[str] = set().union(*(r.sessions for r in repos))
     avg = total_cost / len(total_sessions) if total_sessions else 0.0
-    table.add_row(
-        "TOTAL",
-        str(len(total_sessions)),
-        f"{total_turns:,}",
-        f"${total_cost:,.2f}",
-        f"${avg:,.2f}",
-        style="bold",
-    )
-    console.print(table)
+
+    footer = {
+        "repo": "TOTAL",
+        "sessions": str(len(total_sessions)),
+        "turns": f"{total_turns:,}",
+        "total": f"${total_cost:,.2f}",
+        "avg": f"${avg:,.2f}",
+    }
+    columns: list[Column] = [
+        ("Repo", "repo", "left"),
+        ("Sessions", "sessions", "right"),
+        ("Turns", "turns", "right"),
+        ("$ Total", "total", "right"),
+        ("$ / session", "avg", "right"),
+    ]
+    _print_table("Cost by repo", columns, rows, footer=footer)
 
 
 def _resolve_since(days: int | None, since: str | None) -> tuple[datetime | None, date]:
@@ -374,26 +412,24 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    console = Console()
     since_dt, start_d = _resolve_since(args.days, args.since)
-    console.print(f"[dim]Window: {start_d} to {date.today()}[/dim]")
+    print(f"Window: {start_d} to {date.today()}")
 
     turns = iter_turns(since=since_dt)
     if not turns:
-        console.print("[yellow]No Claude Code sessions found in this window.[/yellow]")
+        print("No Claude Code sessions found in this window.")
         return 0
 
     sessions = aggregate_sessions(turns)
     repos = aggregate_repos(turns)
 
-    console.print(
-        f"[dim]Parsed {len(turns):,} assistant turns across "
-        f"{len(sessions)} sessions in {len(repos)} repos.[/dim]\n"
+    print(
+        f"Parsed {len(turns):,} assistant turns across "
+        f"{len(sessions)} sessions in {len(repos)} repos."
     )
 
-    render_session_table(sessions, args.top, console)
-    console.print()
-    render_repo_table(repos, console)
+    render_session_table(sessions, args.top)
+    render_repo_table(repos)
     return 0
 
 

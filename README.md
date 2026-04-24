@@ -18,9 +18,8 @@ paid.
 ## Requirements
 
 - [Claude Code](https://claude.com/claude-code)
-- [uv](https://docs.astral.sh/uv/) (the script uses PEP 723 inline deps;
-  `uv run` auto-installs `rich` on first run)
-- Python 3.11+
+- [uv](https://docs.astral.sh/uv/) to run the script via its PEP 723 header
+- Python 3.11+ (the script uses only the standard library)
 
 ## Install
 
@@ -45,21 +44,23 @@ for subscription info), which is why this plugin uses `/api-cost`.
 ## What you will see
 
 ```
-Window: 2026-03-25 to 2026-04-24
-Parsed 8,421 assistant turns across 127 sessions in 14 repos.
+Window: 2026-04-17 to 2026-04-24
+Parsed 14,423 assistant turns across 60 sessions in 12 repos.
 
-Top 10 most expensive sessions
- #  Date              Repo       Model     Turns   Input  Output  Cache hit   $ Cost  Session
- 1  2026-04-18 09:12  meta       opus-4    412     1.2M   89.3K   72%         $48.21  a1b2c3d4
- 2  2026-04-20 14:30  stitch     opus-4    287     810K   54.1K   68%         $33.08  e5f6g7h8
- ...
+Top 5 most expensive sessions
+#  Date         Repo         Model   Turns  Input  Output  Cache   $ Cost  Session
+-  -----------  -----------  ------  -----  -----  ------  -----  -------  --------
+1  04-22 17:41  stitch-mono  opus-4  1,835   3.3K    1.5M    98%  $824.90  794f6f7a
+2  04-20 08:10  stitch-mono  opus-4  1,855  11.4K    1.0M    98%  $729.40  a3e67dda
+...
 
 Cost by repo
- Repo       Sessions   Turns   $ Total    $ / session
- meta       42         2,104   $210.44    $5.01
- stitch     18         1,322   $128.70    $7.15
- ...
- TOTAL      127        8,421   $612.33    $4.82
+Repo                 Sessions   Turns    $ Total  $ / session
+-------------------  --------  ------  ---------  -----------
+meta                       32   5,307  $2,111.88       $66.00
+stitch-mono                 5   4,351  $1,782.80      $356.56
+...
+TOTAL                      60  14,423  $5,505.22       $91.75
 ```
 
 ## How the pricing works
