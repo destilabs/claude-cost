@@ -1,0 +1,13 @@
+{
+  "name": "claude-cost",
+  "version": "0.1.0",
+  "description": "Price local Claude Code sessions at the Anthropic API rate card. Adds /cost - shows top expensive sessions and per-repo totals with diagnostic columns (turns, cache hit %, model).",
+  "author": {
+    "name": "DestiLabs",
+    "url": "https://github.com/destilabs"
+  },
+  "homepage": "https://github.com/destilabs/claude-cost",
+  "repository": "https://github.com/destilabs/claude-cost",
+  "license": "MIT",
+  "keywords": ["cost", "usage", "analytics", "pricing", "sessions"]
+}
