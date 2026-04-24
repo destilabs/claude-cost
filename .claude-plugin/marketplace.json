@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "claude-cost",
+  "version": "0.1.0",
+  "description": "Price your local Claude Code sessions at the Anthropic API rate card",
+  "owner": {
+    "name": "DestiLabs",
+    "url": "https://github.com/destilabs"
+  },
+  "plugins": [
+    {
+      "name": "claude-cost",
+      "description": "Adds /cost - lists top expensive sessions (with turns, cache hit %, dominant model) and per-repo totals, priced at the Anthropic API rate card",
+      "version": "0.1.0",
+      "source": "./",
+      "category": "analytics"
+    }
+  ]
+}
