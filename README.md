@@ -2,9 +2,9 @@
 
 Price your local Claude Code sessions at the Anthropic API rate card.
 
-Adds a `/cost` slash command that walks `~/.claude/projects/*.jsonl`, computes
-a shadow cost for each assistant turn from its `usage` metadata, and prints
-two tables:
+Adds an `/api-cost` slash command that walks `~/.claude/projects/*.jsonl`,
+computes a shadow cost for each assistant turn from its `usage` metadata,
+and prints two tables:
 
 1. **Top N most expensive sessions** - with turns, input/output tokens,
    cache hit %, and the dominant model, so you can see *why* a session was
@@ -33,11 +33,14 @@ Or clone this repo and point Claude Code at it as a local plugin.
 ## Usage
 
 ```
-/cost                       # last 30 days, top 10 sessions
-/cost --days 7              # last 7 days
-/cost --since 2026-04-01    # since a specific date
-/cost --top 25              # wider session table
+/api-cost                       # last 30 days, top 10 sessions
+/api-cost --days 7              # last 7 days
+/api-cost --since 2026-04-01    # since a specific date
+/api-cost --top 25              # wider session table
 ```
+
+The bare `/cost` slash is reserved by Claude Code (aliased to `/usage`
+for subscription info), which is why this plugin uses `/api-cost`.
 
 ## What you will see
 
