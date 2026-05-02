@@ -77,12 +77,15 @@ Each assistant turn in a Claude Code session JSONL carries a `usage` block:
 ```
 
 The script multiplies each token count by the per-model rate in the public
-[Anthropic pricing page](https://www.anthropic.com/pricing#api) and sums.
-`cache_creation_input_tokens` is billed between 1.25x and 2x the input rate
-depending on TTL; the script uses the 5-minute rate, which slightly
-undercounts 1-hour cache writes.
+[Anthropic pricing page](https://platform.claude.com/docs/en/about-claude/pricing)
+and sums. `cache_creation_input_tokens` is billed between 1.25x and 2x the
+input rate depending on TTL; the script uses the 5-minute rate, which
+slightly undercounts 1-hour cache writes.
 
-Unknown models fall back to the Opus tier (conservative over-count).
+Opus 4.5, 4.6, and 4.7 are billed at the lower tier ($5 input, $25 output,
+$0.50 cache read per million tokens). Opus 4 and 4.1 remain at the higher
+tier ($15 / $75 / $1.50). The script encodes both. Unknown models fall back
+to the current Opus tier (conservative over-count for new models).
 
 ## Scope
 
