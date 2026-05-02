@@ -32,14 +32,17 @@ from pathlib import Path
 CLAUDE_PROJECTS_DIR = Path.home() / ".claude" / "projects"
 
 # Per-million-token USD rates: (input, output, cache_write_5m, cache_read).
-# cache_creation_input_tokens is billed at ~1.25x input for 5m TTL and
-# ~2x input for 1h TTL; we approximate with the 5m rate, which slightly
-# undercounts 1h cache writes.
+# Source: https://platform.claude.com/docs/en/about-claude/pricing
+# Opus 4.5 launched at a 3x lower tier than Opus 4 / 4.1.
+# cache_creation_input_tokens is billed at 1.25x input for 5m TTL and 2x
+# input for 1h TTL; we use the 5m rate, which slightly undercounts 1h
+# cache writes.
 MODEL_RATES: dict[str, tuple[float, float, float, float]] = {
     "claude-opus-4": (15.00, 75.00, 18.75, 1.50),
-    "claude-opus-4-5": (15.00, 75.00, 18.75, 1.50),
-    "claude-opus-4-6": (15.00, 75.00, 18.75, 1.50),
-    "claude-opus-4-7": (15.00, 75.00, 18.75, 1.50),
+    "claude-opus-4-1": (15.00, 75.00, 18.75, 1.50),
+    "claude-opus-4-5": (5.00, 25.00, 6.25, 0.50),
+    "claude-opus-4-6": (5.00, 25.00, 6.25, 0.50),
+    "claude-opus-4-7": (5.00, 25.00, 6.25, 0.50),
     "claude-3-opus": (15.00, 75.00, 18.75, 1.50),
     "claude-sonnet-4": (3.00, 15.00, 3.75, 0.30),
     "claude-sonnet-4-5": (3.00, 15.00, 3.75, 0.30),
@@ -50,7 +53,7 @@ MODEL_RATES: dict[str, tuple[float, float, float, float]] = {
     "claude-haiku-4-5": (1.00, 5.00, 1.25, 0.10),
     "claude-3-5-haiku": (0.80, 4.00, 1.00, 0.08),
 }
-DEFAULT_RATE = (15.00, 75.00, 18.75, 1.50)  # unknown models fall back to Opus tier
+DEFAULT_RATE = (5.00, 25.00, 6.25, 0.50)  # unknown models fall back to current Opus tier
 
 
 def lookup_rate(model: str) -> tuple[float, float, float, float]:
